@@ -16,6 +16,8 @@
 from __future__ import annotations
 
 import logging
+import multiprocessing as mp
+import os
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Optional
 
@@ -55,6 +57,14 @@ if TYPE_CHECKING:
     from sglang.srt.model_executor.model_runner import ModelRunner
 
 logger = logging.getLogger(__name__)
+
+
+def _set_shared_mp_authkey() -> None:
+    key = os.getenv("HW_AGENT_MP_AUTHKEY", "hw-agent-mp-authkey").encode("utf-8")
+    try:
+        mp.current_process().authkey = key
+    except Exception:
+        pass
 
 
 class BaseTpWorker(ABC):
@@ -153,7 +163,7 @@ class BaseTpWorker(ABC):
         return success, message
 
     def update_weights_from_tensor(self, recv_req: UpdateWeightsFromTensorReqInput):
-
+        _set_shared_mp_authkey()
         monkey_patch_torch_reductions()
         success, message = self.model_runner.update_weights_from_tensor(
             named_tensors=MultiprocessingSerializer.deserialize(
